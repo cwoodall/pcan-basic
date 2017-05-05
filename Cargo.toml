@@ -6,5 +6,5 @@ version = "0.1.0"
 [dependencies]
 
 [dependencies.pcan-basic-bindings]
+git = "https://github.com/cwoodall/pcan-basic-bindings.git"
 optional = false
-path = "../pcan-basic-bindings/"
