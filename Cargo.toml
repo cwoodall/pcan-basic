@@ -1,0 +1,10 @@
+[package]
+authors = ["Christopher J. Woodall <chris.j.woodall@gmail.com>"]
+name = "pcan-basic"
+version = "0.1.0"
+
+[dependencies]
+
+[dependencies.pcan-basic-bindings]
+optional = false
+path = "../pcan-basic-bindings/"
