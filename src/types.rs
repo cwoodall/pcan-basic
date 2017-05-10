@@ -1,4 +1,5 @@
-use pcan_basic_bindings as pcan;
+use pcan_basic_sys as pcan;
+use std::convert::From;
 
 /// Baud rate codes = BTR0/BTR1 register values for the CAN controller.
 #[derive(Debug, Clone, Copy)]
@@ -46,12 +47,12 @@ impl BaudRate {
 #[derive(Debug, Clone, Copy)]
 pub enum Handle {
     Undefined, // The undefined and default value of the handle
-    Isa(u32), // ISA Bus Interface (1 - 8)
-    Dng(u32), // Dng Bus Interface (1)
-    Pci(u32), // PCI Card Interface (1-16)
-    Usb(u32), // PCAN USB Interface Channels (1 to 16)
-    Pcc(u32), // PCAN PC Card Interface (1 and 2)
-    Lan(u32), // PCAN LAN Interface (1 to 16)
+    Isa(u16), // ISA Bus Interface (1 - 8)
+    Dng(u16), // Dng Bus Interface (1)
+    Pci(u16), // PCI Card Interface (1-16)
+    Usb(u16), // PCAN USB Interface Channels (1 to 16)
+    Pcc(u16), // PCAN PC Card Interface (1 and 2)
+    Lan(u16), // PCAN LAN Interface (1 to 16)
 }
 
 impl Handle {
@@ -59,15 +60,15 @@ impl Handle {
     /// pcan-basic C bindings.
     pub fn to_value(&self) -> Option<u16> {
         match *self {
-            Handle::Undefined => Some(0 as u16),
-            Handle::Isa(id @ 1...8) => Some((0x20 + id) as u16),
-            Handle::Dng(1) => Some(0x31 as u16),
-            Handle::Pci(id @ 1...8) => Some((0x40 + id) as u16),
-            Handle::Pci(id @ 9...16) => Some((0x400 + id) as u16),
-            Handle::Usb(id @ 1...8) => Some((0x50 + id) as u16),
-            Handle::Usb(id @ 9...16) => Some((0x500 + id) as u16),
-            Handle::Pcc(id @ 1...2) => Some((0x60 + id) as u16),
-            Handle::Lan(id @ 1...16) => Some((0x800 + id) as u16),
+            Handle::Undefined => Some(0),
+            Handle::Isa(id @ 1...8) => Some((0x20 + id)),
+            Handle::Dng(1) => Some(0x31),
+            Handle::Pci(id @ 1...8) => Some((0x40 + id)),
+            Handle::Pci(id @ 9...16) => Some((0x400 + id)),
+            Handle::Usb(id @ 1...8) => Some((0x50 + id)),
+            Handle::Usb(id @ 9...16) => Some((0x500 + id)),
+            Handle::Pcc(id @ 1...2) => Some((0x60 + id)),
+            Handle::Lan(id @ 1...16) => Some((0x800 + id)),
             _ => None,
         }
     }
@@ -280,6 +281,7 @@ impl ParameterValue {
 /// PCAN Message Types
 #[derive(Debug,Clone,Copy)]
 pub enum MessageType {
+    Undefined,
     Standard,
     Rtr,
     Extended,
@@ -289,16 +291,32 @@ pub enum MessageType {
     Status,
 }
 
-impl MessageType {
-    pub fn to_value(&self) -> u32 {
-        match *self {
-            MessageType::Standard => pcan::PCAN_MESSAGE_STANDARD,
-            MessageType::Rtr => pcan::PCAN_MESSAGE_RTR,
-            MessageType::Extended => pcan::PCAN_MESSAGE_EXTENDED,
-            MessageType::Fd => pcan::PCAN_MESSAGE_FD,
-            MessageType::Brs => pcan::PCAN_MESSAGE_BRS,
-            MessageType::Esi => pcan::PCAN_MESSAGE_ESI,
-            MessageType::Status => pcan::PCAN_MESSAGE_STATUS,
+impl From<u8> for MessageType {
+    fn from(x: u8) -> MessageType {
+        match x as u32 {
+            pcan::PCAN_MESSAGE_STANDARD => MessageType::Standard,
+            pcan::PCAN_MESSAGE_RTR => MessageType::Rtr,
+            pcan::PCAN_MESSAGE_EXTENDED => MessageType::Extended,
+            pcan::PCAN_MESSAGE_FD => MessageType::Fd,
+            pcan::PCAN_MESSAGE_BRS => MessageType::Brs,
+            pcan::PCAN_MESSAGE_ESI => MessageType::Esi,
+            pcan::PCAN_MESSAGE_STATUS => MessageType::Status,
+            _ => MessageType::Undefined,
+        }
+    }
+}
+
+impl From<MessageType> for u8 {
+    fn from(x: MessageType) -> u8 {
+        match x {
+            MessageType::Standard => pcan::PCAN_MESSAGE_STANDARD as u8,
+            MessageType::Rtr => pcan::PCAN_MESSAGE_RTR as u8,
+            MessageType::Extended => pcan::PCAN_MESSAGE_EXTENDED as u8,
+            MessageType::Fd => pcan::PCAN_MESSAGE_FD as u8,
+            MessageType::Brs => pcan::PCAN_MESSAGE_BRS as u8,
+            MessageType::Esi => pcan::PCAN_MESSAGE_ESI as u8,
+            MessageType::Status => pcan::PCAN_MESSAGE_STATUS as u8,
+            _ => panic!("Invalid Message Type"),
         }
     }
 }
@@ -346,22 +364,22 @@ impl Type {
 #[cfg(test)]
 mod tests {
     use {Handle, Parameter};
-    use pcan_basic_bindings as pcan;
+    use pcan_basic_sys as pcan;
     #[test]
     fn it_works() {}
 
     #[test]
     fn handle_to_value() {
-        assert!(Handle::Undefined.to_value() == Some(pcan::PCAN_NONEBUS));
+        assert!(Handle::Undefined.to_value() == Some(pcan::PCAN_NONEBUS as u16));
         assert!(Handle::Isa(0).to_value() == None);
-        assert!(Handle::Isa(1).to_value() == Some(pcan::PCAN_ISABUS1));
-        assert!(Handle::Isa(8).to_value() == Some(pcan::PCAN_ISABUS8));
+        assert!(Handle::Isa(1).to_value() == Some(pcan::PCAN_ISABUS1 as u16));
+        assert!(Handle::Isa(8).to_value() == Some(pcan::PCAN_ISABUS8 as u16));
         assert!(Handle::Isa(9).to_value() == None);
         assert!(Handle::Usb(0).to_value() == None);
-        assert!(Handle::Usb(1).to_value() == Some(pcan::PCAN_USBBUS1));
-        assert!(Handle::Usb(8).to_value() == Some(pcan::PCAN_USBBUS8));
-        assert!(Handle::Usb(9).to_value() == Some(pcan::PCAN_USBBUS9));
-        assert!(Handle::Usb(16).to_value() == Some(pcan::PCAN_USBBUS16));
+        assert!(Handle::Usb(1).to_value() == Some(pcan::PCAN_USBBUS1 as u16));
+        assert!(Handle::Usb(8).to_value() == Some(pcan::PCAN_USBBUS8 as u16));
+        assert!(Handle::Usb(9).to_value() == Some(pcan::PCAN_USBBUS9 as u16));
+        assert!(Handle::Usb(16).to_value() == Some(pcan::PCAN_USBBUS16 as u16));
         assert!(Handle::Usb(17).to_value() == None);
     }
 }
